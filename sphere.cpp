@@ -1,7 +1,7 @@
 #include "sphere.h"
 #include <stdlib.h>
+#include <limits>
 #include <math.h>
-
 /**********************************************************************
  * This function intersects a ray with a given sphere 'sph'. You should
  * use the parametric representation of a line and do the intersection.
@@ -13,7 +13,26 @@
  * stored in the "hit" variable
  **********************************************************************/
 float intersect_sphere(Point o, Vector u, Spheres *sph, Point *hit) {
-	return 0.0;
+  Vector center_to_o = get_vec(sph->center, o);
+  // construct quadratic equation a, b, c
+  float a = vec_dot(u, u), b = 2 * vec_dot(u, center_to_o), c = vec_dot(center_to_o, center_to_o) - sph->radius * sph->radius;
+  float delta = b * b - 4 * a * c;
+  if (delta < 0) {
+    return -1;
+  }
+  float t = -1, t_1, t_2;
+  // t_1 is smaller
+  t_1 = (-b - sqrt(delta)) / (2 * a);
+  if (t_1 >= 0) {
+    t = t_1;
+  } else {
+    t_2 = (-b + sqrt(delta)) / (2 * a);
+    if (t_2 >= 0) {
+      t = t_2;
+    }
+  }
+  if (t != -1) *hit = get_point(o, vec_scale(u, t));
+  return t;
 }
 
 /*********************************************************************
@@ -22,12 +41,23 @@ float intersect_sphere(Point o, Vector u, Spheres *sph, Point *hit) {
  * which arguments to use for the function. For exmaple, note that you
  * should return the point of intersection to the calling function.
  **********************************************************************/
-Spheres *intersect_scene() {
-//
-// do your thing here
-//
-
-	return NULL;
+// FIXME: int what_is_this
+Spheres *intersect_scene(Point o, Vector u, Spheres *slist, Point* hit_min, int what_is_this) {
+  hit_min = NULL;
+  Spheres *p = slist;
+  float t_min = std::numeric_limits<float>::max(), t_temp;
+  Point* hit;
+  Spheres *sphere_min = NULL;
+  while (p != NULL) {
+      t_temp = intersect_sphere(o, u, p, hit);
+      if (t_temp < t_min) {
+        t_min = t_temp;
+        sphere_min = p;
+        hit_min = hit;
+      }
+      p = p->next;
+  }
+	return sphere_min;
 }
 
 /*****************************************************

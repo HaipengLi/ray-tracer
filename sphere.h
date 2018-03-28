@@ -6,7 +6,7 @@
 typedef struct sphere {
   int index;               // identifies a sphere; must be greater than 0
 
-  Point center;
+  Point center;            // Point: x, y, z
   float radius;
 
   float mat_ambient[3];    // material property used in Phong model
