@@ -12,5 +12,5 @@ Use make command to compile. make clean & make clean_object to clean.
 
 # run
 ```shell
-$ ./creeper
+$ ./raycast
 ```
