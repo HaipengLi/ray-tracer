@@ -1,0 +1,15 @@
+# vscode
+.vscode
+
+# build stuff
+*.o
+depend
+
+# executable
+raycast
+raycast.exe
+
+# blender files
+*.blend
+*.blend1
+*.mtl
