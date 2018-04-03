@@ -105,6 +105,28 @@ Spheres *add_sphere(Spheres *slist, Point ctr, float rad, float amb[],
   return slist;
 }
 
+bool isBlocked(Spheres *sph, Point o, Point d, Spheres *slist) {
+  // is there any other spheres on the way between o and d?
+  Vector v = d - o;
+  Point hit;
+  float t;
+  for (Spheres *p = slist; p != NULL; p = p->next) {
+    // special case: sphere itself
+    if (p == sph) {
+      if (dot(sph->center - d, sph->center - o) < 0) {
+        return true;
+      } else {
+        continue;
+      }
+    }
+    t = intersect_sphere(o, v, p, &hit);
+    if (t > 0 && t < 1) {
+      // t is (0, 1), then the intersection is between o and d
+      return true;
+    }
+  }
+  return false;
+}
 /******************************************
  * computes a sphere normal - done for you
  ******************************************/

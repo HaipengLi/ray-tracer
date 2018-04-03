@@ -23,6 +23,8 @@ typedef struct sphere {
   struct sphere *next;
 } Spheres;   // a list of spheres
 
+// is
+bool isBlocked(Spheres *sph, Point o, Point p, Spheres *sph_list);
 // intersect ray with sphere
 Spheres *intersect_scene(Point, Vector, Spheres *, Point *);
 // return the unit normal at a point on sphere

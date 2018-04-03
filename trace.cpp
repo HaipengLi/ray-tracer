@@ -1,6 +1,5 @@
 #include <iostream>
 #include <stdio.h>
-// #include <GL/glut.h>
 #include <math.h>
 #include "global.h"
 #include "sphere.h"
@@ -94,7 +93,14 @@ RGB_float recursive_ray_trace(Point o, Vector u, int depth) {
 
   // compute the color of intersection by THREE parts
   // 1. shadow ray: phong local illumination?
-  RGB_float shadow_ray_rgb = phong(intersection_point, normalize(-u), sphere_normal(intersection_point, intersection_sphere), intersection_sphere);
+  RGB_float shadow_ray_rgb;
+  if (shadow_on && isBlocked(intersection_sphere, intersection_point, light1, scene)) {
+    // if blocked by other sphere, only show global ambient
+    shadow_ray_rgb = global_ambient * intersection_sphere->mat_ambient;
+  } else {
+    // else use phong
+    shadow_ray_rgb = phong(intersection_point, normalize(-u), sphere_normal(intersection_point, intersection_sphere), intersection_sphere);
+  }
 
   // 2. reflected ray
   RGB_float reflected_ray_rgb = 0;

@@ -1,6 +1,5 @@
 #include "image_util.h"
 #include <stdio.h>
-// #include <GL/glut.h>
 #include <string.h>
 #include "global.h"
 
