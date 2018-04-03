@@ -1,7 +1,6 @@
-#include "include/Angel.h"
 #include <iostream>
 #include <stdio.h>
-#include <GL/glut.h>
+// #include <GL/glut.h>
 #include <math.h>
 #include "global.h"
 #include "sphere.h"
@@ -50,8 +49,8 @@ RGB_float phong(Point q, Vector v, Vector surf_norm, Spheres *sph) {
 
   float d = length(q - light1);  // distance between light and object
   vec3 norm = {surf_norm.x, surf_norm.y, surf_norm.z};
-  vec3 l =  light1 - q;  // p to light source
-  vec3 r = 2 * dot(norm, l) * norm - l;  // reflect of l
+  vec3 l =  normalize(light1 - q);  // p to light source
+  vec3 r = normalize(2 * dot(norm, l) * norm - l);  // reflect of l
 
   // global ambient
   vec3 ga_rgb = global_ambient * sph->mat_ambient;
@@ -59,11 +58,14 @@ RGB_float phong(Point q, Vector v, Vector surf_norm, Spheres *sph) {
   vec3 a_rgb = light1_ambient * sph->mat_ambient;
   // diffuse
   vec3 d_rgb = light1_diffuse * sph->mat_diffuse * (dot(norm, l));
-  if (d_rgb < 0) {
-    std::cout << "Warning: diffuse term is negative!\n";
+  if (dot(norm, l) < 0) {
+    d_rgb = 0;
   }
   // specular
   vec3 s_rgb = light1_specular * sph->mat_specular * pow(dot(r, v), sph->mat_shineness);
+  if (dot(r, v) < 0) {
+    s_rgb = 0;
+  }
 
 	RGB_float color;
   // add all terms
@@ -76,11 +78,32 @@ RGB_float phong(Point q, Vector v, Vector surf_norm, Spheres *sph) {
  * This is the recursive ray tracer - you need to implement this!
  * You should decide what arguments to use.
  ************************************************************************/
-RGB_float recursive_ray_trace() {
-//
-// do your thing here
-//
-	RGB_float color;
+RGB_float recursive_ray_trace(Point o, Vector u, int depth) {
+  // exit of recursion
+  if (depth == 0) return 0;
+
+  // find the intersecion
+  Point intersection_point;
+  Spheres *intersection_sphere = intersect_scene(o, u, scene, &intersection_point);
+
+  // no intersection, return background color
+  if (intersection_sphere == NULL) {
+    return background_clr;
+  }
+
+
+  // compute the color of intersection by THREE parts
+  // 1. shadow ray: phong local illumination?
+  RGB_float shadow_ray_rgb = phong(intersection_point, normalize(-u), sphere_normal(intersection_point, intersection_sphere), intersection_sphere);
+
+  // 2. reflected ray
+  RGB_float reflected_ray_rgb = 0;
+
+  // 3. refracted ray
+  RGB_float refracted_ray_rgb = 0;
+
+  // sum ray
+	RGB_float color = shadow_ray_rgb + reflected_ray_rgb + refracted_ray_rgb;
 	return color;
 }
 
@@ -109,7 +132,7 @@ void ray_trace() {
 
   for (i=0; i<win_height; i++) {
     for (j=0; j<win_width; j++) {
-      ray = get_vec(eye_pos, cur_pixel_pos);
+      ray = cur_pixel_pos - eye_pos;
 
       //
       // You need to change this!!!
@@ -121,15 +144,16 @@ void ray_trace() {
       //
       // ray.x = ray.y = 0;
       // ray.z = -1.0;
-      // ret_color = recursive_ray_trace(cur_pixel_pos, ray, 1);
+      ret_color = recursive_ray_trace(eye_pos, ray, 1);
 
-// Checkboard for testing
-RGB_float clr = {float(i/32), 0, float(j/32)};
-ret_color = clr;
+      // Checkboard for testing
+      // RGB_float clr = {float(i/32), 0, float(j/32)};
+      // ret_color = clr;
 
-      frame[i][j][0] = GLfloat(ret_color.r);
-      frame[i][j][1] = GLfloat(ret_color.g);
-      frame[i][j][2] = GLfloat(ret_color.b);
+
+      frame[i][j][0] = GLfloat(ret_color.x);
+      frame[i][j][1] = GLfloat(ret_color.y);
+      frame[i][j][2] = GLfloat(ret_color.z);
 
       cur_pixel_pos.x += x_grid_size;
     }

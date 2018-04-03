@@ -1,5 +1,6 @@
 #include "sphere.h"
 #include <stdlib.h>
+#include <assert.h>
 #include <limits>
 #include <math.h>
 /**********************************************************************
@@ -13,6 +14,8 @@
  * stored in the "hit" variable
  **********************************************************************/
 float intersect_sphere(Point o, Vector u, Spheres *sph, Point *hit) {
+  // assert the point o is not inside the sphere
+  assert(length(o - sph->center) > sph->radius);
   Vector center_to_o = o - sph->center;
   // construct quadratic equation a, b, c
   float a = dot(u, u), b = 2 * dot(u, center_to_o), c = dot(center_to_o, center_to_o) - sph->radius * sph->radius;
@@ -31,7 +34,10 @@ float intersect_sphere(Point o, Vector u, Spheres *sph, Point *hit) {
       t = t_2;
     }
   }
-  if (t != -1) *hit = u * t - o;  //get_point(o, vec_scale(u, t))
+  // FIXME: bugs of hit
+  if (t != -1) {
+    *hit = u * t + o;  //get_point(o, vec_scale(u, t))
+  }
   return t;
 }
 
@@ -41,19 +47,21 @@ float intersect_sphere(Point o, Vector u, Spheres *sph, Point *hit) {
  * which arguments to use for the function. For exmaple, note that you
  * should return the point of intersection to the calling function.
  **********************************************************************/
-// FIXME: int what_is_this
-Spheres *intersect_scene(Point o, Vector u, Spheres *slist, Point* hit_min, int what_is_this) {
-  hit_min = NULL;
+Spheres *intersect_scene(Point o, Vector u, Spheres *slist, Point* hit_min) {
   Spheres *p = slist;
   float t_min = std::numeric_limits<float>::max(), t_temp;
-  Point* hit;
+  Point hit;
   Spheres *sphere_min = NULL;
   while (p != NULL) {
-      t_temp = intersect_sphere(o, u, p, hit);
-      if (t_temp < t_min) {
+      t_temp = intersect_sphere(o, u, p, &hit);
+      if (t_temp != -1 && t_temp < t_min) {
         t_min = t_temp;
+        // make sure the point is on the sphere
+        assert(fabs(length(p->center - hit) - p->radius) < 1e-3);
+        // make sure the point is visible
+        assert(dot(u, (p->center - hit)) >= 0);
         sphere_min = p;
-        hit_min = hit;
+        *hit_min = hit;
       }
       p = p->next;
   }
