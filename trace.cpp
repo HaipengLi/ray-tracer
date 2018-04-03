@@ -38,6 +38,8 @@ extern float decay_c;
 
 extern int shadow_on;
 extern int step_max;
+extern int reflection_on;
+extern int refraction_on;
 
 /////////////////////////////////////////////////////////////////////
 
@@ -90,6 +92,8 @@ RGB_float recursive_ray_trace(Point o, Vector u, int depth) {
     return background_clr;
   }
 
+  Vector intersection_norm = sphere_normal(intersection_point, intersection_sphere);
+
 
   // compute the color of intersection by THREE parts
   // 1. shadow ray: phong local illumination?
@@ -104,12 +108,21 @@ RGB_float recursive_ray_trace(Point o, Vector u, int depth) {
 
   // 2. reflected ray
   RGB_float reflected_ray_rgb = 0;
+  if (reflection_on) {
+    Vector r = normalize(2 * dot(-u, intersection_norm) * intersection_norm + u);
+    reflected_ray_rgb = recursive_ray_trace(intersection_point, r, depth - 1);
+    if (reflected_ray_rgb.x < 0 || reflected_ray_rgb.y < 0 || reflected_ray_rgb.z < 0) {
+      std::cout << "Warning: Negative reflected color\n";
+    }
+  }
 
   // 3. refracted ray
   RGB_float refracted_ray_rgb = 0;
 
   // sum ray
-	RGB_float color = shadow_ray_rgb + reflected_ray_rgb + refracted_ray_rgb;
+	RGB_float color = shadow_ray_rgb + 
+    reflected_ray_rgb * intersection_sphere->reflectance + 
+    refracted_ray_rgb;
 	return color;
 }
 
@@ -150,7 +163,7 @@ void ray_trace() {
       //
       // ray.x = ray.y = 0;
       // ray.z = -1.0;
-      ret_color = recursive_ray_trace(eye_pos, ray, 1);
+      ret_color = recursive_ray_trace(eye_pos, ray, step_max + 1);
 
       // Checkboard for testing
       // RGB_float clr = {float(i/32), 0, float(j/32)};

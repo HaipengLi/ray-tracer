@@ -1,4 +1,5 @@
 #include "sphere.h"
+#include <iostream>
 #include <stdlib.h>
 #include <assert.h>
 #include <limits>
@@ -15,7 +16,24 @@
  **********************************************************************/
 float intersect_sphere(Point o, Vector u, Spheres *sph, Point *hit) {
   // assert the point o is not inside the sphere
-  assert(length(o - sph->center) > sph->radius);
+  // assert(length(o - sph->center) >= sph->radius);
+  if (fabs(length(o - sph->center) - sph->radius) < 1e-3) {
+    // the point is on the sphere: two case
+    if (dot(u, sph->center - o) > 0) {
+      // 1. u is to the sphere, intersection: o 
+      std::cout << "Warning: self reflection??\n";
+      *hit = o;
+      return 0;
+    } else {
+      // 2. u is off the sphere, intersection: NULL
+      return -1;
+    }
+  }
+  if (length(o - sph->center) < sph->radius) {
+    // should not happen in this assignment
+    std::cout << "Warning: view point inside the sphere; inside distance is " << 
+      fabs(length(o - sph->center) - sph->radius) << "\n";
+  }
   Vector center_to_o = o - sph->center;
   // construct quadratic equation a, b, c
   float a = dot(u, u), b = 2 * dot(u, center_to_o), c = dot(center_to_o, center_to_o) - sph->radius * sph->radius;
@@ -59,7 +77,7 @@ Spheres *intersect_scene(Point o, Vector u, Spheres *slist, Point* hit_min) {
         // make sure the point is on the sphere
         assert(fabs(length(p->center - hit) - p->radius) < 1e-3);
         // make sure the point is visible
-        assert(dot(u, (p->center - hit)) >= 0);
+        assert(dot(normalize(u), sphere_normal(hit, p)) <= 1e-3);
         sphere_min = p;
         *hit_min = hit;
       }
