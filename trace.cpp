@@ -1,3 +1,5 @@
+#include "include/Angel.h"
+#include <iostream>
 #include <stdio.h>
 #include <GL/glut.h>
 #include <math.h>
@@ -24,12 +26,12 @@ extern Spheres *scene;
 
 // light 1 position and color
 extern Point light1;
-extern float light1_ambient[3];
-extern float light1_diffuse[3];
-extern float light1_specular[3];
+extern vec3 light1_ambient;
+extern vec3 light1_diffuse;
+extern vec3 light1_specular;
 
 // global ambient term
-extern float global_ambient[3];
+extern vec3 global_ambient;
 
 // light decay parameters
 extern float decay_a;
@@ -45,10 +47,28 @@ extern int step_max;
  * Phong illumination - you need to implement this!
  *********************************************************************/
 RGB_float phong(Point q, Vector v, Vector surf_norm, Spheres *sph) {
-//
-// do your thing here
-//
+
+  float d = length(q - light1);  // distance between light and object
+  vec3 norm = {surf_norm.x, surf_norm.y, surf_norm.z};
+  vec3 l =  light1 - q;  // p to light source
+  vec3 r = 2 * dot(norm, l) * norm - l;  // reflect of l
+
+  // global ambient
+  vec3 ga_rgb = global_ambient * sph->mat_ambient;
+  // ambient
+  vec3 a_rgb = light1_ambient * sph->mat_ambient;
+  // diffuse
+  vec3 d_rgb = light1_diffuse * sph->mat_diffuse * (dot(norm, l));
+  if (d_rgb < 0) {
+    std::cout << "Warning: diffuse term is negative!\n";
+  }
+  // specular
+  vec3 s_rgb = light1_specular * sph->mat_specular * pow(dot(r, v), sph->mat_shineness);
+
 	RGB_float color;
+  // add all terms
+  color = ga_rgb + a_rgb + 1.0 / (decay_a + decay_b * d + decay_c * d * d) * (d_rgb + s_rgb);
+
 	return color;
 }
 

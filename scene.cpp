@@ -1,15 +1,16 @@
 //
 // this provide functions to set up the scene
 //
+#include "include/Angel.h"
 #include "sphere.h"
 #include <stdio.h>
 
 extern Point light1;
-extern float light1_ambient[3];
-extern float light1_diffuse[3];
-extern float light1_specular[3];
+extern vec3 light1_ambient;
+extern vec3 light1_diffuse;
+extern vec3 light1_specular;
 
-extern float global_ambient[3];
+extern vec3 global_ambient;
 extern Spheres *scene;
 
 extern RGB_float background_clr;

@@ -60,12 +60,12 @@ Spheres *scene = NULL;
 
 // light 1 position and color
 Point light1;
-float light1_ambient[3];
-float light1_diffuse[3];
-float light1_specular[3];
+vec3 light1_ambient;
+vec3 light1_diffuse;
+vec3 light1_specular;
 
 // global ambient term
-float global_ambient[3];
+vec3 global_ambient;
 
 // light decay parameters
 float decay_a;

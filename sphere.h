@@ -1,7 +1,9 @@
 /**********************************************************************
  * Some stuff to handle spheres
  **********************************************************************/
-#include "vector.h"
+#include "include/Angel.h"
+#include "global.h"
+// #include "vector.h"
 
 typedef struct sphere {
   int index;               // identifies a sphere; must be greater than 0
@@ -9,9 +11,9 @@ typedef struct sphere {
   Point center;            // Point: x, y, z
   float radius;
 
-  float mat_ambient[3];    // material property used in Phong model
-  float mat_diffuse[3];
-  float mat_specular[3];
+  vec3 mat_ambient;    // material property used in Phong model
+  vec3 mat_diffuse;
+  vec3 mat_specular;
   float mat_shineness;
 
   float reflectance;       // this number [0,1] determines how much 

@@ -13,9 +13,9 @@
  * stored in the "hit" variable
  **********************************************************************/
 float intersect_sphere(Point o, Vector u, Spheres *sph, Point *hit) {
-  Vector center_to_o = get_vec(sph->center, o);
+  Vector center_to_o = o - sph->center;
   // construct quadratic equation a, b, c
-  float a = vec_dot(u, u), b = 2 * vec_dot(u, center_to_o), c = vec_dot(center_to_o, center_to_o) - sph->radius * sph->radius;
+  float a = dot(u, u), b = 2 * dot(u, center_to_o), c = dot(center_to_o, center_to_o) - sph->radius * sph->radius;
   float delta = b * b - 4 * a * c;
   if (delta < 0) {
     return -1;
@@ -31,7 +31,7 @@ float intersect_sphere(Point o, Vector u, Spheres *sph, Point *hit) {
       t = t_2;
     }
   }
-  if (t != -1) *hit = get_point(o, vec_scale(u, t));
+  if (t != -1) *hit = u * t - o;  //get_point(o, vec_scale(u, t))
   return t;
 }
 
@@ -103,7 +103,7 @@ Spheres *add_sphere(Spheres *slist, Point ctr, float rad, float amb[],
 Vector sphere_normal(Point q, Spheres *sph) {
   Vector rc;
 
-  rc = get_vec(sph->center, q);
-  normalize(&rc);
+  rc = q - sph->center;
+  rc = normalize(rc);
   return rc;
 }
