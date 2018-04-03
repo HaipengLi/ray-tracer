@@ -81,7 +81,8 @@ RGB_float phong(Point q, Vector v, Vector surf_norm, Spheres *sph) {
  ************************************************************************/
 RGB_float recursive_ray_trace(Point o, Vector i, int depth, bool inside=false) {
   // exit of recursion
-  if (depth == 0) return 0;
+  if (depth == 0) return background_clr;
+  i = normalize(i);
 
   // find the intersecion
   Point intersection_point;
@@ -125,7 +126,7 @@ RGB_float recursive_ray_trace(Point o, Vector i, int depth, bool inside=false) {
   if (refraction_on) {
     // https://graphics.stanford.edu/courses/cs148-10-summer/docs/2006--degreve--reflection_refraction.pdf
     // payattention to refractive index inside / outside the sphere
-    float cos_theta_i = dot(intersection_norm, -i) / (length(intersection_norm) * length(i));
+    float cos_theta_i = -dot(intersection_norm, i);
     float refractive_index = inside ? intersection_sphere->refractive_index : 1.0 / intersection_sphere->refractive_index;
     Vector t = refractive_index * i + 
       (refractive_index * cos_theta_i - sqrt(1 - pow(refractive_index, 2) * (1 - pow(cos_theta_i, 2)))) * intersection_norm;
@@ -133,9 +134,9 @@ RGB_float recursive_ray_trace(Point o, Vector i, int depth, bool inside=false) {
   }
 
   // sum ray
-	RGB_float color = shadow_ray_rgb * (1 - intersection_sphere->reflectance - intersection_sphere->refractance) + 
+	RGB_float color = shadow_ray_rgb + (
     reflected_ray_rgb * intersection_sphere->reflectance + 
-    refracted_ray_rgb * intersection_sphere->refractance;
+    refracted_ray_rgb * intersection_sphere->transparency * (1 - intersection_sphere->reflectance));
 	return color;
 }
 

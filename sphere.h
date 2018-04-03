@@ -23,7 +23,7 @@ typedef struct sphere {
   // this number [0,1] determines how much 
   // refracted light contributes to the color
   // of a pixel
-  float refractance;
+  float transparency;
   float refractive_index;
 
   struct sphere *next;
