@@ -79,13 +79,13 @@ RGB_float phong(Point q, Vector v, Vector surf_norm, Spheres *sph) {
  * This is the recursive ray tracer - you need to implement this!
  * You should decide what arguments to use.
  ************************************************************************/
-RGB_float recursive_ray_trace(Point o, Vector u, int depth) {
+RGB_float recursive_ray_trace(Point o, Vector i, int depth, bool inside=false) {
   // exit of recursion
   if (depth == 0) return 0;
 
   // find the intersecion
   Point intersection_point;
-  Spheres *intersection_sphere = intersect_scene(o, u, scene, &intersection_point);
+  Spheres *intersection_sphere = intersect_scene(o, i, scene, &intersection_point);
 
   // no intersection, return background color
   if (intersection_sphere == NULL) {
@@ -93,6 +93,10 @@ RGB_float recursive_ray_trace(Point o, Vector u, int depth) {
   }
 
   Vector intersection_norm = sphere_normal(intersection_point, intersection_sphere);
+  if (inside) {
+    // norm should be -norm inside the sphere
+    intersection_norm = -intersection_norm;
+  }
 
 
   // compute the color of intersection by THREE parts
@@ -103,13 +107,13 @@ RGB_float recursive_ray_trace(Point o, Vector u, int depth) {
     shadow_ray_rgb = global_ambient * intersection_sphere->mat_ambient;
   } else {
     // else use phong
-    shadow_ray_rgb = phong(intersection_point, normalize(-u), sphere_normal(intersection_point, intersection_sphere), intersection_sphere);
+    shadow_ray_rgb = phong(intersection_point, normalize(-i), sphere_normal(intersection_point, intersection_sphere), intersection_sphere);
   }
 
   // 2. reflected ray
   RGB_float reflected_ray_rgb = 0;
   if (reflection_on) {
-    Vector r = normalize(2 * dot(-u, intersection_norm) * intersection_norm + u);
+    Vector r = normalize(2 * dot(-i, intersection_norm) * intersection_norm + i);
     reflected_ray_rgb = recursive_ray_trace(intersection_point, r, depth - 1);
     if (reflected_ray_rgb.x < 0 || reflected_ray_rgb.y < 0 || reflected_ray_rgb.z < 0) {
       std::cout << "Warning: Negative reflected color\n";
@@ -118,11 +122,20 @@ RGB_float recursive_ray_trace(Point o, Vector u, int depth) {
 
   // 3. refracted ray
   RGB_float refracted_ray_rgb = 0;
+  if (refraction_on) {
+    // https://graphics.stanford.edu/courses/cs148-10-summer/docs/2006--degreve--reflection_refraction.pdf
+    // payattention to refractive index inside / outside the sphere
+    float cos_theta_i = dot(intersection_norm, -i) / (length(intersection_norm) * length(i));
+    float refractive_index = inside ? intersection_sphere->refractive_index : 1.0 / intersection_sphere->refractive_index;
+    Vector t = refractive_index * i + 
+      (refractive_index * cos_theta_i - sqrt(1 - pow(refractive_index, 2) * (1 - pow(cos_theta_i, 2)))) * intersection_norm;
+    refracted_ray_rgb = recursive_ray_trace(intersection_point, t, depth - 1, !inside);
+  }
 
   // sum ray
-	RGB_float color = shadow_ray_rgb + 
+	RGB_float color = shadow_ray_rgb * (1 - intersection_sphere->reflectance - intersection_sphere->refractance) + 
     reflected_ray_rgb * intersection_sphere->reflectance + 
-    refracted_ray_rgb;
+    refracted_ray_rgb * intersection_sphere->refractance;
 	return color;
 }
 

@@ -17,22 +17,17 @@
 float intersect_sphere(Point o, Vector u, Spheres *sph, Point *hit) {
   // assert the point o is not inside the sphere
   // assert(length(o - sph->center) >= sph->radius);
+  bool refract_flag = false;
   if (fabs(length(o - sph->center) - sph->radius) < 1e-3) {
     // the point is on the sphere: two case
     if (dot(u, sph->center - o) > 0) {
       // 1. u is to the sphere, intersection: o 
-      std::cout << "Warning: self reflection??\n";
-      *hit = o;
-      return 0;
+      // TODO: refraction ray
+      refract_flag = true;
     } else {
       // 2. u is off the sphere, intersection: NULL
       return -1;
     }
-  }
-  if (length(o - sph->center) < sph->radius) {
-    // should not happen in this assignment
-    std::cout << "Warning: view point inside the sphere; inside distance is " << 
-      fabs(length(o - sph->center) - sph->radius) << "\n";
   }
   Vector center_to_o = o - sph->center;
   // construct quadratic equation a, b, c
@@ -44,15 +39,16 @@ float intersect_sphere(Point o, Vector u, Spheres *sph, Point *hit) {
   float t = -1, t_1, t_2;
   // t_1 is smaller
   t_1 = (-b - sqrt(delta)) / (2 * a);
+  t_2 = (-b + sqrt(delta)) / (2 * a);
   if (t_1 >= 0) {
     t = t_1;
-  } else {
-    t_2 = (-b + sqrt(delta)) / (2 * a);
-    if (t_2 >= 0) {
-      t = t_2;
-    }
+  } else if (t_2 >= 0) {
+    t = t_2;
   }
-  // FIXME: bugs of hit
+  if (refract_flag) {
+    assert(t_2 >= 0);
+    t = t_2;
+  }
   if (t != -1) {
     *hit = u * t + o;  //get_point(o, vec_scale(u, t))
   }
@@ -76,8 +72,8 @@ Spheres *intersect_scene(Point o, Vector u, Spheres *slist, Point* hit_min) {
         t_min = t_temp;
         // make sure the point is on the sphere
         assert(fabs(length(p->center - hit) - p->radius) < 1e-3);
-        // make sure the point is visible
-        assert(dot(normalize(u), sphere_normal(hit, p)) <= 1e-3);
+        // make sure the point is visible (not applicable for refraction)
+        // assert(dot(nor)malize(u), sphere_normal(hit, p)) <= 1e-3);
         sphere_min = p;
         *hit_min = hit;
       }
@@ -92,8 +88,8 @@ Spheres *intersect_scene(Point o, Vector u, Spheres *slist, Point* hit_min) {
  * You need not change this.
  *****************************************************/
 Spheres *add_sphere(Spheres *slist, Point ctr, float rad, float amb[],
-		    float dif[], float spe[], float shine, 
-		    float refl, int sindex) {
+		    float dif[], float spe[], float shine, float refl, 
+        float refractance, float refractive_index, int sindex) {
   Spheres *new_sphere;
 
   new_sphere = (Spheres *)malloc(sizeof(Spheres));
@@ -111,6 +107,8 @@ Spheres *add_sphere(Spheres *slist, Point ctr, float rad, float amb[],
   (new_sphere->mat_specular)[2] = spe[2];
   new_sphere->mat_shineness = shine;
   new_sphere->reflectance = refl;
+  new_sphere->refractance = refractance;
+  new_sphere->refractive_index = refractive_index;
   new_sphere->next = NULL;
 
   if (slist == NULL) { // first object
