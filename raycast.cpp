@@ -81,6 +81,8 @@ int step_max = 1;
 int shadow_on = 0;
 int reflection_on = 0;
 int refraction_on = 0;
+int super_sampling_on = 0;
+int scochatic_on = 0;
 
 
 // OpenGL
@@ -224,9 +226,11 @@ int main( int argc, char **argv )
 	// Optional arguments
 	for(int i = 3; i < argc; i++)
 	{
-		if (strcmp(argv[i], "-s") == 0)	shadow_on = 1;
-		if (strcmp(argv[i], "-l") == 0)	reflection_on = 1;
-		if (strcmp(argv[i], "-r") == 0)	refraction_on = 1;
+		if (strcmp(argv[i], "+s") == 0)	shadow_on = 1;
+		if (strcmp(argv[i], "+l") == 0)	reflection_on = 1;
+		if (strcmp(argv[i], "+r") == 0)	refraction_on = 1;
+		if (strcmp(argv[i], "+f") == 0)	scochatic_on = 1;
+		if (strcmp(argv[i], "+p") == 0)	super_sampling_on = 1;
 
 	}
 

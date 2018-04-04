@@ -3,10 +3,13 @@
 
 #include "include/Angel.h"
 
-#define WIN_WIDTH 1000
-#define WIN_HEIGHT 1000
+const int WIN_WIDTH = 256;
+const int WIN_HEIGHT = 256;
+const float IMAGE_WIDTH = 5.0;
 
-#define IMAGE_WIDTH 5.0
+const int STOCHASTIC_RAY_NUM = 2;
+
+
 
 typedef vec3 Point;
 typedef vec3 Vector;

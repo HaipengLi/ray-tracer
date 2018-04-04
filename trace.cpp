@@ -40,6 +40,8 @@ extern int shadow_on;
 extern int step_max;
 extern int reflection_on;
 extern int refraction_on;
+extern int super_sampling_on;
+extern int scochatic_on;
 
 /////////////////////////////////////////////////////////////////////
 
@@ -75,13 +77,28 @@ RGB_float phong(Point q, Vector v, Vector surf_norm, Spheres *sph) {
 	return color;
 }
 
+float random_float(int lo, int hi) {
+    return ((float)rand() / (float)RAND_MAX) * (hi - lo) + lo;
+}
+
+Vector random_vector(Vector norm) {
+  while (true) {
+    Vector v = vec3(random_float(-1, 1), random_float(-1, 1), random_float(-1, 1));
+    if (dot(norm, v) > 0) {
+      return normalize(v);
+    }
+  }
+}
+
+
+
 /************************************************************************
  * This is the recursive ray tracer - you need to implement this!
  * You should decide what arguments to use.
  ************************************************************************/
 RGB_float recursive_ray_trace(Point o, Vector i, int depth, bool inside=false) {
   // exit of recursion
-  if (depth == 0) return background_clr;
+  if (depth == 0) return 0;
   i = normalize(i);
 
   // find the intersecion
@@ -115,7 +132,7 @@ RGB_float recursive_ray_trace(Point o, Vector i, int depth, bool inside=false) {
   RGB_float reflected_ray_rgb = 0;
   if (reflection_on) {
     Vector r = normalize(2 * dot(-i, intersection_norm) * intersection_norm + i);
-    reflected_ray_rgb = recursive_ray_trace(intersection_point, r, depth - 1);
+    reflected_ray_rgb = recursive_ray_trace(intersection_point, r, depth - 1, inside);
     if (reflected_ray_rgb.x < 0 || reflected_ray_rgb.y < 0 || reflected_ray_rgb.z < 0) {
       std::cout << "Warning: Negative reflected color\n";
     }
@@ -133,10 +150,20 @@ RGB_float recursive_ray_trace(Point o, Vector i, int depth, bool inside=false) {
     refracted_ray_rgb = recursive_ray_trace(intersection_point, t, depth - 1, !inside);
   }
 
+  // 4. scochatic rays
+  RGB_float scochatic_ray_rgb = 0;
+  if (scochatic_on) {
+    for (int index = 0; index < STOCHASTIC_RAY_NUM; index++) {
+      Vector s_ray = random_vector(intersection_norm);
+      scochatic_ray_rgb += recursive_ray_trace(intersection_point, s_ray, depth - 1, inside); 
+    }
+  }
+
   // sum ray
-	RGB_float color = shadow_ray_rgb + (
+	RGB_float color = shadow_ray_rgb + 
     reflected_ray_rgb * intersection_sphere->reflectance + 
-    refracted_ray_rgb * intersection_sphere->transparency * (1 - intersection_sphere->reflectance));
+    refracted_ray_rgb * intersection_sphere->transparency * (1 - intersection_sphere->reflectance) +
+    scochatic_ray_rgb * 0.1 ;
 	return color;
 }
 
