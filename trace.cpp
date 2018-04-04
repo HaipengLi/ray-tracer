@@ -206,6 +206,18 @@ void ray_trace() {
       // ray.z = -1.0;
       ret_color = recursive_ray_trace(eye_pos, ray, step_max + 1);
 
+      float x_quarter_grid = x_grid_size / 4;
+      float y_quarter_grid = y_grid_size / 4;
+      if (super_sampling_on) {
+        // std::cout << ray<< "\n";
+        // std::cout << ray + Vector(-x_quarter_grid, -y_quarter_grid, 0) << "\n";
+        ret_color += recursive_ray_trace(eye_pos, ray + Vector(-x_quarter_grid, -y_quarter_grid, 0), step_max + 1);
+        ret_color += recursive_ray_trace(eye_pos, ray + Vector(x_quarter_grid, -y_quarter_grid, 0), step_max + 1);
+        ret_color += recursive_ray_trace(eye_pos, ray + Vector(-x_quarter_grid, y_quarter_grid, 0), step_max + 1);
+        ret_color += recursive_ray_trace(eye_pos, ray + Vector(x_quarter_grid, y_quarter_grid, 0), step_max + 1);
+        ret_color /= 5.0;
+      }
+
       // Checkboard for testing
       // RGB_float clr = {float(i/32), 0, float(j/32)};
       // ret_color = clr;
