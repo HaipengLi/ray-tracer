@@ -27,3 +27,11 @@ $ ./raycast [scene_option] [max_step] [additional option]
     * +c : add chessboard object to the scene
     * +f : add diffuse reflection effect
     * +p : add anti-aliasing effect
+
+Demo with reflection and shadow:
+
+![](images/default.bmp)
+
+Demo with reflection, shadow and chessboard:
+
+![](images/mine.bmp)
