@@ -1,9 +1,12 @@
 #include <iostream>
+#include <vector>
 #include <stdio.h>
 #include <math.h>
 #include "global.h"
-#include "sphere.h"
+#include "scene.h"
+#include "sphere.hpp"
 
+using namespace std;
 //
 // Global variables
 //
@@ -20,7 +23,7 @@ extern float image_plane;
 extern RGB_float background_clr;
 extern RGB_float null_clr;
 
-extern Spheres *scene;
+extern vector<Object*> scene;
 
 // light 1 position and color
 extern Point light1;
@@ -42,30 +45,37 @@ extern int reflection_on;
 extern int refraction_on;
 extern int super_sampling_on;
 extern int scochatic_on;
+extern int chessboard_on;
 
 /////////////////////////////////////////////////////////////////////
 
 /*********************************************************************
  * Phong illumination - you need to implement this!
  *********************************************************************/
-RGB_float phong(Point q, Vector v, Vector surf_norm, Spheres *sph) {
-
+RGB_float phong(Point q, Vector v, Vector surf_norm, Object *obj) {
+  // q: point on obj
+  // v: vector from q to eye
   float d = length(q - light1);  // distance between light and object
   vec3 norm = {surf_norm.x, surf_norm.y, surf_norm.z};
   vec3 l =  normalize(light1 - q);  // p to light source
   vec3 r = normalize(2 * dot(norm, l) * norm - l);  // reflect of l
 
   // global ambient
-  vec3 ga_rgb = global_ambient * sph->mat_ambient;
+  vec3 ga_rgb = global_ambient * obj->get_ambient(q);
+  if (!obj->is_visible_from(q, light1)) {
+    // if this point q not visible from light, only show ga
+    return ga_rgb;
+  }
   // ambient
-  vec3 a_rgb = light1_ambient * sph->mat_ambient;
+  vec3 a_rgb = light1_ambient * obj->get_ambient(q);
   // diffuse
-  vec3 d_rgb = light1_diffuse * sph->mat_diffuse * (dot(norm, l));
+  vec3 d_rgb = light1_diffuse * obj->get_diffuse(q) * (dot(norm, l));
   if (dot(norm, l) < 0) {
+    // cout << "Warning: Should not happen 1\n";
     d_rgb = 0;
   }
   // specular
-  vec3 s_rgb = light1_specular * sph->mat_specular * pow(dot(r, v), sph->mat_shineness);
+  vec3 s_rgb = light1_specular * obj->get_specular(q) * pow(dot(r, v), obj->get_shineness(q));
   if (dot(r, v) < 0) {
     s_rgb = 0;
   }
@@ -96,43 +106,43 @@ Vector random_vector(Vector norm) {
  * This is the recursive ray tracer - you need to implement this!
  * You should decide what arguments to use.
  ************************************************************************/
-RGB_float recursive_ray_trace(Point o, Vector i, int depth, bool inside=false) {
+RGB_float recursive_ray_trace(Point o, Vector i, int depth) {
   // exit of recursion
   if (depth == 0) return 0;
   i = normalize(i);
 
   // find the intersecion
-  Point intersection_point;
-  Spheres *intersection_sphere = intersect_scene(o, i, scene, &intersection_point);
-
-  // no intersection, return background color
-  if (intersection_sphere == NULL) {
+  Point hit_point;
+  Object* hit_obj;
+  if (!intersect_scene(o, i, hit_point, hit_obj)) {
+    // no intersection, return background color
     return background_clr;
   }
 
-  Vector intersection_norm = sphere_normal(intersection_point, intersection_sphere);
+  Vector hit_norm = hit_obj->get_normal(hit_point);
+  bool inside = (dot(i, hit_norm) > 0);
   if (inside) {
     // norm should be -norm inside the sphere
-    intersection_norm = -intersection_norm;
+    hit_norm = -hit_norm;
   }
 
 
   // compute the color of intersection by THREE parts
   // 1. shadow ray: phong local illumination?
   RGB_float shadow_ray_rgb;
-  if (shadow_on && isBlocked(intersection_sphere, intersection_point, light1, scene)) {
+  if (shadow_on && is_blocked(hit_obj, hit_point + hit_norm * BIAS, light1)) {
     // if blocked by other sphere, only show global ambient
-    shadow_ray_rgb = global_ambient * intersection_sphere->mat_ambient;
+    shadow_ray_rgb = global_ambient * hit_obj->get_ambient(hit_point);
   } else {
     // else use phong
-    shadow_ray_rgb = phong(intersection_point, normalize(-i), sphere_normal(intersection_point, intersection_sphere), intersection_sphere);
+    shadow_ray_rgb = phong(hit_point, normalize(-i), hit_norm, hit_obj);
   }
 
   // 2. reflected ray
   RGB_float reflected_ray_rgb = 0;
   if (reflection_on) {
-    Vector r = normalize(2 * dot(-i, intersection_norm) * intersection_norm + i);
-    reflected_ray_rgb = recursive_ray_trace(intersection_point, r, depth - 1, inside);
+    Vector r = normalize(2 * dot(-i, hit_norm) * hit_norm + i);
+    reflected_ray_rgb = recursive_ray_trace(hit_point + hit_norm * BIAS, r, depth - 1);
     if (reflected_ray_rgb.x < 0 || reflected_ray_rgb.y < 0 || reflected_ray_rgb.z < 0) {
       std::cout << "Warning: Negative reflected color\n";
     }
@@ -140,29 +150,29 @@ RGB_float recursive_ray_trace(Point o, Vector i, int depth, bool inside=false) {
 
   // 3. refracted ray
   RGB_float refracted_ray_rgb = 0;
-  if (refraction_on) {
+  if (refraction_on && hit_obj->get_transparency(hit_point) > 0) {
     // https://graphics.stanford.edu/courses/cs148-10-summer/docs/2006--degreve--reflection_refraction.pdf
     // payattention to refractive index inside / outside the sphere
-    float cos_theta_i = -dot(intersection_norm, i);
-    float refractive_index = inside ? intersection_sphere->refractive_index : 1.0 / intersection_sphere->refractive_index;
+    float cos_theta_i = -dot(hit_norm, i);
+    float refractive_index = inside ? hit_obj->get_refractive_index(hit_point) : 1.0 / hit_obj->get_refractive_index(hit_point);
     Vector t = refractive_index * i + 
-      (refractive_index * cos_theta_i - sqrt(1 - pow(refractive_index, 2) * (1 - pow(cos_theta_i, 2)))) * intersection_norm;
-    refracted_ray_rgb = recursive_ray_trace(intersection_point, t, depth - 1, !inside);
+      (refractive_index * cos_theta_i - sqrt(1 - pow(refractive_index, 2) * (1 - pow(cos_theta_i, 2)))) * hit_norm;
+    refracted_ray_rgb = recursive_ray_trace(hit_point - hit_norm * BIAS, t, depth - 1);
   }
 
   // 4. scochatic rays
   RGB_float scochatic_ray_rgb = 0;
   if (scochatic_on) {
     for (int index = 0; index < STOCHASTIC_RAY_NUM; index++) {
-      Vector s_ray = random_vector(intersection_norm);
-      scochatic_ray_rgb += recursive_ray_trace(intersection_point, s_ray, depth - 1, inside); 
+      Vector s_ray = random_vector(hit_norm);
+      scochatic_ray_rgb += recursive_ray_trace(hit_point + hit_norm * BIAS, s_ray, depth - 1); 
     }
   }
 
   // sum ray
 	RGB_float color = shadow_ray_rgb + 
-    reflected_ray_rgb * intersection_sphere->reflectance + 
-    refracted_ray_rgb * intersection_sphere->transparency * (1 - intersection_sphere->reflectance) +
+    reflected_ray_rgb * hit_obj->get_reflectance(hit_point) + 
+    refracted_ray_rgb * hit_obj->get_transparency(hit_point) * (1 - hit_obj->get_reflectance(hit_point)) +
     scochatic_ray_rgb * 0.1 ;
 	return color;
 }

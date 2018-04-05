@@ -18,12 +18,16 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <vector>
 
 #include "trace.h"
 #include "global.h"
-#include "sphere.h"
+#include "object.hpp"
+#include "sphere.hpp"
 #include "image_util.h"
 #include "scene.h"
+
+using namespace std;
 
 //
 // Global variables
@@ -56,7 +60,8 @@ Point eye_pos = {0.0, 0.0, 0.0};  // eye position
 float image_plane = -2;           // image plane position
 
 // list of spheres in the scene
-Spheres *scene = NULL;
+
+vector<Object*> scene;
 
 // light 1 position and color
 Point light1;
@@ -83,6 +88,7 @@ int reflection_on = 0;
 int refraction_on = 0;
 int super_sampling_on = 0;
 int scochatic_on = 0;
+int chessboard_on = 0;
 
 
 // OpenGL
@@ -190,7 +196,7 @@ void keyboard(unsigned char key, int x, int y)
 {
 	switch (key) {
 	case 'q':case 'Q':
-		free(scene);
+	    destroy_scene();
 		exit(0);
 		break;
 	case 's':case 'S':
@@ -215,12 +221,6 @@ int main( int argc, char **argv )
 		return -1;
 	}
 	
-	if (strcmp(argv[1], "-u") == 0) {  // user defined scene
-		set_up_user_scene();
-	} else { // default scene
-		set_up_default_scene();
-	}
-
 	step_max = atoi(argv[2]); // maximum level of recursions
 
 	// Optional arguments
@@ -231,8 +231,16 @@ int main( int argc, char **argv )
 		if (strcmp(argv[i], "+r") == 0)	refraction_on = 1;
 		if (strcmp(argv[i], "+f") == 0)	scochatic_on = 1;
 		if (strcmp(argv[i], "+p") == 0)	super_sampling_on = 1;
+		if (strcmp(argv[i], "+c") == 0)	chessboard_on = 1;
 
 	}
+
+	if (strcmp(argv[1], "-u") == 0) {  // user defined scene
+		set_up_user_scene();
+	} else { // default scene
+		set_up_default_scene(chessboard_on);
+	}
+
 
 	//
 	// ray trace the scene now
