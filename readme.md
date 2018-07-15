@@ -3,8 +3,11 @@ Implements a ray tracer to render a scene with highly specular reflections
 
 # requirement
 c++ 11
+
 opengl 3.2
+
 freeglut
+
 glew
 
 # build
